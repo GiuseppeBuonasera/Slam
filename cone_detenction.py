@@ -16,7 +16,7 @@ from geometry_msgs.msg import PoseStamped , Point
 punti_solidali =[]
 posizione_macchina = []
 ang = math.pi/720
-xe = 0.3  #posizione del lidar rispetto alla macchina
+xe = 0.32  #posizione del lidar rispetto alla macchina
 
 def callback(data):
 
@@ -35,7 +35,7 @@ def callback(data):
             j = i 
             while j < len(lista) and lista[j] != float('inf'):
                 j += 1
-                ang1 = i * ang
+                ang1 = j * ang
                 ang2 = math.pi - ang1
                 x = (lista[i] * math.sin(ang2)) + xe 
                 y = lista[i] * math.cos(ang2) 
@@ -44,11 +44,11 @@ def callback(data):
             clusters.append(punti)
         else:
             i += 1
-    
+   
     for a,e in enumerate(clusters):
-        xc, yc, r, sigma = taubinSVD(e)
-        print(sigma)
-        coordinate_centri.append([xc,yc])
+        if len(e)>8:
+            xc, yc, r, sigma = taubinSVD(e)
+            coordinate_centri.append([xc,yc])
         
         
     #con questa vado anche a pubblicare i punti
@@ -66,10 +66,11 @@ def callback(data):
     
 #funzione che calcola i centri dell'ostacolo rispetto all'origine    
 def calcolo_punti_origine(coordinate_centri):
+    print(coordinate_centri)
     punti_solidali.clear()
     
-    xm = posizione_macchina[0][1] 
-    ym = posizione_macchina[0][0] 
+    xm = posizione_macchina[0][0]
+    ym = posizione_macchina[0][1]
     for e in coordinate_centri:
         xs = e[0] + xm 
         ys = e[1] + ym 
@@ -90,26 +91,26 @@ def posizione(dati):
 
 #Funzione che pubblica i centri degli ostacoli
 def publish_points(posizione_macchina):
+    pub = rospy.Publisher('/center_point', Point, queue_size=1000)
+    rate = rospy.Rate(1000)
+
     if not rospy.is_shutdown():
-        pub = rospy.Publisher('/center_point', Point, queue_size=1000)
-        rate = rospy.Rate(1000)  
-
-        for x,y in posizione_macchina:
-            point_msg = Point()
-            point_msg.x = x  
-            point_msg.y = y  
-            point_msg.z = 0.0  
-
-            pub.publish(point_msg)
-    else:
-        pub = rospy.Publisher('/center_point', Point, queue_size=1000)
-        rate = rospy.Rate(1000)
-        for x,y in posizione_macchina:
+        if posizione_macchina:
+            for x, y in posizione_macchina:
+                point_msg = Point()
+                point_msg.x = x
+                point_msg.y = y
+                point_msg.z = 0.0
+                pub.publish(point_msg)
+        else:
             point_msg = Point()
             point_msg.x = 0.0
-            point_msg.y = 0.0 
-            point_msg.z = 0.0 
+            point_msg.y = 0.0
+            point_msg.z = 0.0
+            pub.publish(point_msg)
+
     rate.sleep()
+
 
 
 
@@ -117,7 +118,6 @@ def publish_points(posizione_macchina):
 
 def main():
     rospy.init_node('lettura_topic')
-    
     rospy.Subscriber('/steer_bot/message_to_tf/pose', PoseStamped, posizione)
     
     rospy.Subscriber('/rrbot/laser/scan', LaserScan, callback)
