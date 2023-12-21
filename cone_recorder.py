@@ -1,131 +1,156 @@
 import rospy
 import math
-import numpy as np
-import circle_fit as cf
-from circle_fit import taubinSVD
-from sensor_msgs.msg import PointCloud2
-import std_msgs.msg
-import sensor_msgs.point_cloud2 as pc2
-from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped , Point
+from sensor_msgs.msg import PointCloud2 
+import sensor_msgs.point_cloud2 as pc2
+import threading
+import time
+import std_msgs.msg
 
-
-
-
-
-punti_solidali =[]
-posizione_macchina = []
-ang = math.pi/720
-xe = 0.32  #posizione del lidar rispetto alla macchina
-
+errore = 0.5
+count=0
+conteggio_punti = {} 
+punti_filtrati = []
+punti_filtrati1 = []
+buffer = []
 def callback(data):
+    global count
+    punti_circo = []
+    
+    x = data.x
+    y = data.y
+    
+    point = (x, y)
+    if point == (0,0):
+        point = None
+    else:
+        buffer.append([point])
+    
+    
+    for valori in buffer: 
+        lista_conteggio_punti(valori)
+        filtra_punti(punti_filtrati, errore)
+        
+    if count == 9:   
+        conteggio_punti.clear()
+        punti_filtrati.clear()
+        buffer.clear()
+
+        count = 0
+    else:
+        count +=1
+    
+    
+
+    for a in punti_filtrati1:
+        punti_cerchi = circonferenza(a, r=0.5, numero_punti=360)
+        punti_circo.append(punti_cerchi)
+        publish_circle(punti_circo)
+
+    print(punti_filtrati1)
+    punti_circo.clear()
+
+
+
+def lista_conteggio_punti(punti):
+    
+
+    for valori in punti:
+        x,y = valori
+        trovato = False
+        for (x1, y1), conteggio in conteggio_punti.items():
+            differenza_x = abs(x - x1)
+            differenza_y = abs(y - y1)
+            condizione = differenza_x <= 0.3 and differenza_y <= 0.3
+
+            if condizione:
+                media_x = (x1 + x) / 2
+                media_y = (y1 + y) / 2
+                chiave_media = (media_x, media_y)
+                conteggio_punti[chiave_media] = conteggio_punti.get(chiave_media, 0) + 1
+
+                trovato = True
+                break
+
+
+        if not trovato:
+            conteggio_punti[(x, y)] = 1
+
+    for punto, conteggio in conteggio_punti.items():
+       
+        if conteggio > 9 and punto  not in punti_filtrati:
+            punti_filtrati.append(punto)
+            
+
 
     
-    data = data.ranges
-    lista = list(data)
-    clusters = []
-    coordinate_centri = []
+    return punti_filtrati
 
-    
-    i = 0
-    #in questo ciclo vado a clusterizzare i punti ragruppandoli 
-    while i < len(lista):
-        if lista[i] != float('inf'):
-            punti = []
-            j = i 
-            while j < len(lista) and lista[j] != float('inf'):
-                j += 1
-                ang1 = j * ang
-                ang2 = math.pi - ang1
-                x = (lista[i] * math.sin(ang2)) + xe 
-                y = lista[i] * math.cos(ang2) 
-                punti.append([x,y])
-                i = j
-            clusters.append(punti)
-        else:
-            i += 1
+def filtra_punti(points, errore):
+    for valori in points:
+        x1, y1 = valori
+        punto_simile = False
+
+        for x2, y2 in punti_filtrati1:
+            if abs(x1 - x2) < errore and abs(y1 - y2) < errore:
+                punto_simile = True
+                break 
+        if not punto_simile:
+            punti_filtrati1.append([x1, y1])
    
-    for a,e in enumerate(clusters):
-        if len(e)>8:
-            xc, yc, r, sigma = taubinSVD(e)
-            coordinate_centri.append([xc,yc])
-        
-        
-    #con questa vado anche a pubblicare i punti
-    punti_solidali= calcolo_punti_origine(coordinate_centri)
-    
+    return punti_filtrati1
 
-    print('POSIZIONE DEI PUNTI RIPETTO ALL ORIGINE: \n')
-    print(punti_solidali)
-    punti_solidali.clear()
-    coordinate_centri.clear()
-    
-    clusters.clear()
-    lista.clear()
-    
-    
-#funzione che calcola i centri dell'ostacolo rispetto all'origine    
-def calcolo_punti_origine(coordinate_centri):
-    print(coordinate_centri)
-    punti_solidali.clear()
-    
-    xm = posizione_macchina[0][0]
-    ym = posizione_macchina[0][1]
-    for e in coordinate_centri:
-        xs = e[0] + xm 
-        ys = e[1] + ym 
-        punti_solidali.append([xs,ys])
-    publish_points(punti_solidali)
-    return punti_solidali
-        
 
-#funzione che ricava la posizione della macchina rispetto all'origine    
-def posizione(dati):  
+
+
+
+
+def publish_circle(punti_circo):
+
+    pub1 = rospy.Publisher('/circle_topic', PointCloud2, queue_size=100)
+    header1 = std_msgs.msg.Header()
+    header1.stamp = rospy.Time.now()
+    header1.frame_id = "odom"   
+       
+    for i,e in enumerate(punti_circo):
+        points2 = [(xc,yc,0.0) for xc,yc in e]
+        cloud_msg2 = pc2.create_cloud_xyz32(header1, points2)
+
+    rate1 = rospy.Rate(2000) 
+    rate1.sleep()
+    pub1.publish(cloud_msg2)
+    points2.clear()
+
+
+
+
+
+
+def circonferenza(centro, r, numero_punti=360):
+    punti_circonferenza = []
+    
+    for i in range(numero_punti):
+        angolo = 2 * math.pi * i / numero_punti
+        x = centro[0] + r * math.cos(angolo)
+        y = centro[1] + r * math.sin(angolo)
+        punti_circonferenza.append([x, y])
+    return punti_circonferenza
+
+
+
+
+def main ():
    
-    posizione_macchina.clear()
-    y = dati.pose.position.x
-    x = dati.pose.position.y
-    posizione_macchina.append([x,y])
-    return posizione_macchina
-
-
-#Funzione che pubblica i centri degli ostacoli
-def publish_points(posizione_macchina):
-    pub = rospy.Publisher('/center_point', Point, queue_size=1000)
-    rate = rospy.Rate(1000)
-
-    if not rospy.is_shutdown():
-        if posizione_macchina:
-            for x, y in posizione_macchina:
-                point_msg = Point()
-                point_msg.x = x
-                point_msg.y = y
-                point_msg.z = 0.0
-                pub.publish(point_msg)
-        else:
-            point_msg = Point()
-            point_msg.x = 0.0
-            point_msg.y = 0.0
-            point_msg.z = 0.0
-            pub.publish(point_msg)
-
-    rate.sleep()
-
-
-
-
-
-
-def main():
-    rospy.init_node('lettura_topic')
-    rospy.Subscriber('/steer_bot/message_to_tf/pose', PoseStamped, posizione)
-    
-    rospy.Subscriber('/rrbot/laser/scan', LaserScan, callback)
-    
+    rospy.init_node('lettura_topic2')
+    rospy.Subscriber('/center_point',  Point, callback ) 
     rospy.spin()
-
     
+
 
 if __name__ == '__main__':
     
+     
     main()
+    
+
+    
