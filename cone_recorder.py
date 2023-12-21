@@ -1,70 +1,72 @@
-
 import rospy
 import math
 from geometry_msgs.msg import PoseStamped , Point
 from sensor_msgs.msg import PointCloud2 
 import sensor_msgs.point_cloud2 as pc2
+import threading
+import time
 import std_msgs.msg
 
 errore = 0.5
-punti_filtrati1 =[]
-punti_filtrati = []
 
+conteggio_punti = {} 
+punti_filtrati = []
+punti_filtrati1 = []
 
 def callback(data):
-    punti_filtrati1 = []
+    
     punti_circo = []
-    point=[]
+
     x = data.x
     y = data.y
-    point.append([x,y])
+
+    point = [(x, y)]
+
     
-    filtra_punti(point,errore)
-    conteggio_punti(punti_filtrati1)
+    lista_conteggio_punti(point)
+    filtra_punti(punti_filtrati, errore)
+    
+    print(punti_filtrati1)
+
     for a in punti_filtrati:
-        
         punti_cerchi = circonferenza(a, r=0.5, numero_punti=360)
         punti_circo.append(punti_cerchi)
         publish_circle(punti_circo)
-    
+
     point.clear()
-    punti_circo.clear() 
+    punti_circo.clear()
 
 
 
-def conteggio_punti(punti):
-    punti_unici = []
-    conteggio_punti = {}
-    punti_filtrati = []
+def lista_conteggio_punti(punti):
+    
 
     for x, y in punti:
-        # Condizione basata sulla differenza tra x e 0.03, e y e 0.03
-        condizione = [abs(x - 0.03), abs(y - 0.03)]
+        trovato = False
+        for (x1, y1), conteggio in conteggio_punti.items():
+            differenza_x = abs(x - x1)
+            differenza_y = abs(y - y1)
+            condizione = differenza_x <= 0.3 and differenza_y <= 0.3
 
-        if tuple(condizione) not in conteggio_punti:
-            conteggio_punti[tuple(condizione)] = 1
-            punti_unici.append(tuple(condizione))
-        else:
-            conteggio_punti[tuple(condizione)] += 1
+            if condizione:
+                conteggio_punti[(x1, y1)] += 1
+                trovato = True
+                break
+
+        if not trovato:
+            conteggio_punti[(x, y)] = 1
 
     for punto, conteggio in conteggio_punti.items():
         if conteggio > 10:
             punti_filtrati.append(punto)
+            del conteggio_punti[punto]
+    
 
-    print("Punti filtrati:", punti_filtrati)
+
+    
     return punti_filtrati
 
-
-  
-
-
-
-
-
-
-
-
-def filtra_punti(points, errore):
+    def filtra_punti(points, errore):
     for valori in points:
         x1, y1 = valori
         punto_simile = False
@@ -142,6 +144,7 @@ def circonferenza(centro, r, numero_punti=360):
 
 
 def main ():
+   
     rospy.init_node('lettura_topic2')
     rospy.Subscriber('/center_point',  Point, callback ) 
     rospy.spin()
@@ -152,4 +155,6 @@ if __name__ == '__main__':
     
      
     main()
+    
+
     
