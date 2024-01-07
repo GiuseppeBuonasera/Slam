@@ -11,8 +11,11 @@ errore = 0.5
 count=0
 conteggio_punti = {} 
 punti_filtrati = []
-punti_filtrati1 = []
 buffer = []
+# modificare il codice in modo tale da guardare per prima la lista definitiva
+
+
+
 def callback(data):
     global count
     punti_circo = []
@@ -20,85 +23,76 @@ def callback(data):
     x = data.x
     y = data.y
     
-    point = (x, y)
+    point = x, y
+    #gestisco i punti nulli
     if point == (0,0):
         point = None
     else:
-        buffer.append([point])
+        buffer.append(point)
     
     
     for valori in buffer: 
-        lista_conteggio_punti(valori)
-        filtra_punti(punti_filtrati, errore)
-        
-    if count == 9:   
+           
+        filtra_punti(valori, errore)
+
+    #quando il counter va a 20 pulisco le liste     
+    if count == 30:   
         conteggio_punti.clear()
-        punti_filtrati.clear()
+        
         buffer.clear()
 
         count = 0
     else:
         count +=1
     
-    
-
-    for a in punti_filtrati1:
+   
+    #pubblicazione cerchi su rviz
+    for a in punti_filtrati:
         punti_cerchi = circonferenza(a, r=0.5, numero_punti=360)
         punti_circo.append(punti_cerchi)
         publish_circle(punti_circo)
 
-    print(punti_filtrati1)
+    print(punti_filtrati)
     punti_circo.clear()
 
 
 
 def lista_conteggio_punti(punti):
+    x,y = punti
     
+    trovato = False
+    for (x1, y1), conteggio in conteggio_punti.items():
+        differenza_x = abs(x - x1)
+        differenza_y = abs(y - y1)
+        condizione = differenza_x <= 0.5 and differenza_y <= 0.5
+        if condizione:
+            conteggio_punti[x1,y1] = conteggio_punti.get((x1,y1), 0) + 1
+            trovato = True
+            break
+    if not trovato:
+        conteggio_punti[(x, y)] = 1
 
-    for valori in punti:
-        x,y = valori
-        trovato = False
-        for (x1, y1), conteggio in conteggio_punti.items():
-            differenza_x = abs(x - x1)
-            differenza_y = abs(y - y1)
-            condizione = differenza_x <= 0.3 and differenza_y <= 0.3
-
-            if condizione:
-                media_x = (x1 + x) / 2
-                media_y = (y1 + y) / 2
-                chiave_media = (media_x, media_y)
-                conteggio_punti[chiave_media] = conteggio_punti.get(chiave_media, 0) + 1
-
-                trovato = True
-                break
-
-
-        if not trovato:
-            conteggio_punti[(x, y)] = 1
-
+    
     for punto, conteggio in conteggio_punti.items():
-       
-        if conteggio > 9 and punto  not in punti_filtrati:
+       if conteggio > 10 and punto  not in punti_filtrati:
             punti_filtrati.append(punto)
             
-
-
-    
     return punti_filtrati
+ 
+
 
 def filtra_punti(points, errore):
-    for valori in points:
-        x1, y1 = valori
-        punto_simile = False
+    x1, y1 = points
+    
+    punto_simile = False
 
-        for x2, y2 in punti_filtrati1:
-            if abs(x1 - x2) < errore and abs(y1 - y2) < errore:
-                punto_simile = True
-                break 
-        if not punto_simile:
-            punti_filtrati1.append([x1, y1])
-   
-    return punti_filtrati1
+    for x2, y2 in punti_filtrati:
+        if abs(x1 - x2) < errore and abs(y1 - y2) < errore:
+            punto_simile = True
+            break 
+    if not punto_simile:
+            lista_conteggio_punti(points)
+    
 
 
 
