@@ -1,11 +1,8 @@
-from xml.dom import xmlbuilder
 import rospy
 import math
 from geometry_msgs.msg import Point
 from sensor_msgs.msg import PointCloud2 
 import sensor_msgs.point_cloud2 as pc2
-import threading
-import time
 import std_msgs.msg
 import numpy as np
 from visualization_msgs.msg import Marker
