@@ -1,11 +1,15 @@
+from wsgiref.simple_server import make_server
+from xml.dom import xmlbuilder
 import rospy
 import math
-from geometry_msgs.msg import PoseStamped , Point
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import PointCloud2 
 import sensor_msgs.point_cloud2 as pc2
 import threading
 import time
 import std_msgs.msg
+import numpy as np
+from visualization_msgs.msg import Marker
 
 errore = 0.5
 count=0
@@ -15,14 +19,11 @@ buffer = []
 # modificare il codice in modo tale da guardare per prima la lista definitiva
 
 
-
 def callback(data):
     global count
     punti_circo = []
-    
     x = data.x
     y = data.y
-    
     point = x, y
     #gestisco i punti nulli
     if point == (0,0):
@@ -30,17 +31,13 @@ def callback(data):
     else:
         buffer.append(point)
     
-    
     for valori in buffer: 
-           
         filtra_punti(valori, errore)
 
     #quando il counter va a 20 pulisco le liste     
-    if count == 30:   
+    if count == 20:   
         conteggio_punti.clear()
-        
         buffer.clear()
-
         count = 0
     else:
         count +=1
@@ -48,10 +45,10 @@ def callback(data):
    
     #pubblicazione cerchi su rviz
     for a in punti_filtrati:
-        punti_cerchi = circonferenza(a, r=0.5, numero_punti=360)
+        punti_cerchi = circonferenza(a, r = 0.5, numero_punti=360)
         punti_circo.append(punti_cerchi)
         publish_circle(punti_circo)
-
+    spawn_cone(punti_filtrati)
     print(punti_filtrati)
     punti_circo.clear()
 
@@ -59,14 +56,16 @@ def callback(data):
 
 def lista_conteggio_punti(punti):
     x,y = punti
-    
     trovato = False
     for (x1, y1), conteggio in conteggio_punti.items():
         differenza_x = abs(x - x1)
         differenza_y = abs(y - y1)
         condizione = differenza_x <= 0.5 and differenza_y <= 0.5
         if condizione:
+            xm = (x + x1)/2
+            ym = (y + y1)/2
             conteggio_punti[x1,y1] = conteggio_punti.get((x1,y1), 0) + 1
+            conteggio_punti[xm, ym] = conteggio_punti.pop((x1, y1))
             trovato = True
             break
     if not trovato:
@@ -131,6 +130,22 @@ def circonferenza(centro, r, numero_punti=360):
     return punti_circonferenza
 
 
+def spawn_cone(punti_filtrati):
+    for (x,y) in punti_filtrati:
+        cono = Marker()
+        cono.type = Marker.CUBE
+        cono.pose.position = Point(x,y, 0.0) #punti cono
+        cono.scale.x = 1.0 #dimensioni 
+        cono.scale.y = 1.0
+        cono.scale.z = 2.0
+        cono.color.a = 1.0
+        cono.color.r = 1.0
+        cono.color.g = 0.0
+        cono.color.b = 0.0
+
+        cono_publisher = rospy.Publisher('/visualization_cone', Marker, queue_size=10)
+        cono_publisher.publish(cono)
+        rospy.sleep(1)
 
 
 def main ():
