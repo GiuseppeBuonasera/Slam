@@ -1,4 +1,3 @@
-from wsgiref.simple_server import make_server
 from xml.dom import xmlbuilder
 import rospy
 import math
