@@ -77,6 +77,7 @@ def calcolo_punti_origine(coordinate_centri):
         punti_solidali.append([xs,ys])
         #print(e[0],e[1])
     publish_points(punti_solidali)
+    posizione_macchina.clear()
     return punti_solidali
         
 
@@ -101,7 +102,7 @@ def posizione(dati):
 
 #Funzione che pubblica i centri degli ostacoli
 def publish_points(posizione_macchina):
-    pub = rospy.Publisher('/center_point', Point, queue_size=1000)
+    pub = rospy.Publisher('/center_point', Point, queue_size=10)
     rate = rospy.Rate(1000)
 
     if not rospy.is_shutdown():
