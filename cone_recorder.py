@@ -3,8 +3,6 @@ import math
 from geometry_msgs.msg import PoseStamped , Point
 from sensor_msgs.msg import PointCloud2 
 import sensor_msgs.point_cloud2 as pc2
-import threading
-import time
 import std_msgs.msg
 from visualization_msgs.msg import Marker, MarkerArray
 
