@@ -34,13 +34,13 @@ def callback(data):
             punti = []
             
             while j < len(lista) and lista[j] != float('inf'):
-                j += 1
+                
                 ang1 = j * ang
                 ang2 = math.pi - ang1
                 y = lista[i]* (math.cos(ang2))   # 
                 x = lista[i]* math.sin(ang2) + xe    #
                 punti.append([x,y])
-                j = i 
+                j += 1
                 i = j
             clusters.append(punti)
             
