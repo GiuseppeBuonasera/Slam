@@ -1,11 +1,6 @@
-import rospy
+import rospy  
 import math
-import numpy as np
-import circle_fit as cf
-from circle_fit import taubinSVD
-from sensor_msgs.msg import PointCloud2
-import std_msgs.msg
-import sensor_msgs.point_cloud2 as pc2
+from circle_fit import taubinSVD 
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped , Point
 from tf.transformations import euler_from_quaternion
@@ -43,15 +38,16 @@ def callback(data):
                 ang1 = j * ang
                 ang2 = math.pi - ang1
                 y = lista[i]* (math.cos(ang2))   # 
-                x = lista[i]* math.sin(ang2) + 0.32    #
+                x = lista[i]* math.sin(ang2) + xe    #
                 punti.append([x,y])
                 i = j
             clusters.append(punti)
+            
         else:
             i += 1
    
     for a,e in enumerate(clusters):
-        if len(e)>10:
+        if (len(e)>6) and confronta_distanze(e)==True:
             xc, yc, r, sigma = taubinSVD(e)
             xa =xc*(math.cos(yaw))- yc*(math.sin(yaw))
             ya = yc*(math.cos(yaw))+ xc*(math.sin(yaw))
@@ -60,21 +56,33 @@ def callback(data):
     print(punti_solidali)
     #print(coordinate_centri)
 
+def confronta_distanze(cluster):
+    x1,y1=cluster[0]
+    xf,yf=cluster[-1]
     
+    xd = abs(x1-xf)
+    yd = abs(y1-yf)
+    if(xd and yd)<0.030 :
+        return True
+    else: 
+        return False
+
+
+
     
 #funzione che calcola i centri dell'ostacolo rispetto all'origine    
 def calcolo_punti_origine(coordinate_centri):
     
     punti_solidali.clear()
-    
-    a = posizione_macchina[0][0]  #coordinate lidar rispetto all'origine
-    b = posizione_macchina[0][1] 
+    if posizione_macchina and len(posizione_macchina)>0:
+        a = posizione_macchina[0][0]  #coordinate lidar rispetto all'origine
+        b = posizione_macchina[0][1] 
     #print(coordinate_centri)
-    for e in coordinate_centri:
+        for e in coordinate_centri:
         
-        xs =    a + e[0]
-        ys =   b + e[1]
-        punti_solidali.append([xs,ys])
+            xs =    a + e[0]
+            ys =   b + e[1]
+            punti_solidali.append([xs,ys])
         #print(e[0],e[1])
     publish_points(punti_solidali)
     posizione_macchina.clear()
@@ -103,7 +111,7 @@ def posizione(dati):
 #Funzione che pubblica i centri degli ostacoli
 def publish_points(posizione_macchina):
     pub = rospy.Publisher('/center_point', Point, queue_size=10)
-    rate = rospy.Rate(1000)
+    rate = rospy.Rate(100)
 
     if not rospy.is_shutdown():
         if posizione_macchina:
@@ -128,7 +136,7 @@ def publish_points(posizione_macchina):
 
 
 def main():
-    rospy.init_node('lettura_topic')
+    rospy.init_node('cone_detenction')
     
     rospy.Subscriber('/steer_bot/message_to_tf/pose', PoseStamped, posizione)
     
