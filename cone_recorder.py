@@ -1,12 +1,12 @@
 import rospy
 import math
-from geometry_msgs.msg import PoseStamped , Point
+from geometry_msgs.msg import Point
 from sensor_msgs.msg import PointCloud2 
 import sensor_msgs.point_cloud2 as pc2
 import std_msgs.msg
 from visualization_msgs.msg import Marker, MarkerArray
 
-errore = 0.5
+errore = 0.2
 count=0
 conteggio_punti = {} 
 punti_filtrati = []
@@ -66,7 +66,7 @@ def lista_conteggio_punti(punti):
     for (x1, y1), conteggio in conteggio_punti.items():
         differenza_x = abs(x - x1)
         differenza_y = abs(y - y1)
-        condizione = differenza_x <= 0.5 and differenza_y <= 0.5
+        condizione = differenza_x <= errore and differenza_y <= errore
         if condizione:
             xm = (x + x1)/2
             ym = (y + y1)/2
@@ -146,12 +146,12 @@ def publish_cylinders(points):
         
         cylinder = Marker()
         cylinder.id = i
-        cylinder.header.frame_id = "base_link"
+        cylinder.header.frame_id = "odom"
         cylinder.type = Marker.CYLINDER
         cylinder.pose.position = Point(point[0], point[1], 0.5)  
         cylinder.pose.orientation.w = 1.0 
-        cylinder.scale.x = 1  # Diametro del cilindro
-        cylinder.scale.y = 1  # Diametro del cilindro
+        cylinder.scale.x = errore  # Diametro del cilindro
+        cylinder.scale.y = errore  # Diametro del cilindro
         cylinder.scale.z = 1.0  # Altezza del cilindro
         cylinder.color.a = 1.0
         cylinder.color.r = 1.0
@@ -167,7 +167,7 @@ def publish_cylinders(points):
 
 def main ():
    
-    rospy.init_node('lettura_topic2')
+    rospy.init_node('cone_recorder')
     rospy.Subscriber('/center_point',  Point, callback ) 
     rospy.spin()
     
