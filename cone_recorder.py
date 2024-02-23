@@ -93,7 +93,7 @@ def filtra_punti(points, errore):
     for x2, y2 in punti_filtrati:
         if abs(x1 - x2) < errore and abs(y1 - y2) < errore:
             punto_simile = True
-            break 
+           
     if not punto_simile:
             lista_conteggio_punti(points)
     
