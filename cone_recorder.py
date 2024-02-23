@@ -12,7 +12,6 @@ conteggio_punti = {}
 punti_filtrati = []
 buffer = []
 
-# modificare il codice in modo tale da guardare per prima la lista definitiva
 
 
 
