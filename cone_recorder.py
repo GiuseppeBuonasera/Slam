@@ -172,10 +172,18 @@ def main ():
     
 
 
-if __name__ == '__main__':
+
     
-     
+try:     
     main()
+
+finally:
+   for x,y in punti_filtrati:
+    plt.plot(x, y, marker='o', linestyle='-')
+plt.grid(True)
+plt.show()
+
+    
     
 
     
