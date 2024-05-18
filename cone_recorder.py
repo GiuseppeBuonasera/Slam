@@ -1,18 +1,17 @@
 import rospy
 import math
 from geometry_msgs.msg import Point
-from sensor_msgs.msg import PointCloud2 
+from sensor_msgs.msg import PointCloud2
+import matplotlib.pyplot as plt
 import sensor_msgs.point_cloud2 as pc2
 import std_msgs.msg
 from visualization_msgs.msg import Marker, MarkerArray
 
-errore = 0.2
+errore = 0.30
 count=0
 conteggio_punti = {} 
 punti_filtrati = []
 buffer = []
-
-
 
 
 def callback(data):
@@ -72,18 +71,20 @@ def lista_conteggio_punti(punti):
             conteggio_punti[x1,y1] = conteggio_punti.get((x1,y1), 0) + 1
             conteggio_punti[xm, ym] = conteggio_punti.pop((x1, y1))
             trovato = True
+
+
             break
     if not trovato:
         conteggio_punti[(x, y)] = 1
 
     
     for punto, conteggio in conteggio_punti.items():
-       if conteggio > 10 and punto  not in punti_filtrati:
+       if conteggio > 20 and punto  not in punti_filtrati:
             punti_filtrati.append(punto)
             
     return punti_filtrati
  
-#media posizioni
+
 
 def filtra_punti(points, errore):
     x1, y1 = points
@@ -93,7 +94,7 @@ def filtra_punti(points, errore):
     for x2, y2 in punti_filtrati:
         if abs(x1 - x2) < errore and abs(y1 - y2) < errore:
             punto_simile = True
-           
+            
     if not punto_simile:
             lista_conteggio_punti(points)
     
@@ -182,8 +183,5 @@ finally:
     plt.plot(x, y, marker='o', linestyle='-')
 plt.grid(True)
 plt.show()
-
-    
-    
 
     
