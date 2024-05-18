@@ -32,15 +32,14 @@ def callback(data):
     while i < len(lista):
         if lista[i] != float('inf'):
             punti = []
-            
+            j = i 
             while j < len(lista) and lista[j] != float('inf'):
-                
+                j += 1
                 ang1 = j * ang
                 ang2 = math.pi - ang1
                 y = lista[i]* (math.cos(ang2))   # 
                 x = lista[i]* math.sin(ang2) + xe    #
                 punti.append([x,y])
-                j += 1
                 i = j
             clusters.append(punti)
             
@@ -48,13 +47,15 @@ def callback(data):
             i += 1
    
     for a,e in enumerate(clusters):
-        if (len(e)>6) and confronta_distanze(e)==True:
+        if (len(e)>10) and confronta_distanze(e)==True:
             xc, yc, r, sigma = taubinSVD(e)
             xa =xc*(math.cos(yaw))- yc*(math.sin(yaw))
             ya = yc*(math.cos(yaw))+ xc*(math.sin(yaw))
             coordinate_centri.append([xa,ya])
+            
     punti_solidali=calcolo_punti_origine(coordinate_centri)
     print(punti_solidali)
+    
     #print(coordinate_centri)
 
 def confronta_distanze(cluster):
@@ -63,7 +64,7 @@ def confronta_distanze(cluster):
     
     xd = abs(x1-xf)
     yd = abs(y1-yf)
-    if(xd and yd)<0.030 :
+    if(xd and yd)<0.030:
         return True
     else: 
         return False
@@ -112,7 +113,7 @@ def posizione(dati):
 #Funzione che pubblica i centri degli ostacoli
 def publish_points(posizione_macchina):
     pub = rospy.Publisher('/center_point', Point, queue_size=10)
-    rate = rospy.Rate(100)
+    rate = rospy.Rate(1000)
 
     if not rospy.is_shutdown():
         if posizione_macchina:
